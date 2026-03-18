@@ -1,7 +1,9 @@
 import pytest
 
-from app.service.alpha_vantage_client import AlphaVantageError, get_company_name, get_cache, get_price_data
 from app import cache
+from app.service.alpha_vantage_client import AlphaVantageError, get_company_name, get_cache, get_price_data
+
+
 @pytest.fixture(autouse=True)
 def clear_cache():
     cache.clear()

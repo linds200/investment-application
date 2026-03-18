@@ -6,10 +6,10 @@ from flask import current_app, g, jsonify, request
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTClaimsError, JWTError
 
+from app.common.response_schema import ErrorResponse
 from app.db import db
 from app.service import user_service
 from app.service.cognito_client import get_user_info
-from app.common.response_schema import ErrorResponse
 
 class CognitoTokenValidator:
     def __init__(self, region: str, user_pool_id: str, client_id: str, domain: str):

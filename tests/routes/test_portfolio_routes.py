@@ -1,10 +1,10 @@
 import pytest
 from pydantic import ValidationError
 
-from app.routes.portfolio_routes import CreatePortfolioRequestSchema, PortfolioSecurityRequestSchema
 from app import cache
 from app.db import db
-from app.models import PortfolioSecurity, User, Portfolio
+from app.models import Portfolio, PortfolioSecurity, User
+from app.routes.portfolio_routes import CreatePortfolioRequestSchema, PortfolioSecurityRequestSchema
 from tests.conftest import client
 
 class FakeValidator:

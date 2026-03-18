@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
 .vscode/settings.json
-
-# Local environment variables (contains secret keys)
 .env
+.DS_Store
+sandbox.txt

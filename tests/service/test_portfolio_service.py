@@ -1,6 +1,7 @@
 import pytest
+
+from app.models import Investment, Portfolio, PortfolioSecurity, User
 import app.service.portfolio_service as portfolio_service
-from app.models import Investment, Portfolio, User, PortfolioSecurity
 
 @pytest.fixture(autouse=True)
 def setup(db_session):

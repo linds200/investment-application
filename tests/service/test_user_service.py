@@ -1,7 +1,8 @@
 import pytest
-import app.service.user_service as user_service
+
 from app.models import User
 from app.service.portfolio_service import create_portfolio
+import app.service.user_service as user_service
 
 def test_get_all_users_exception(db_session, monkeypatch):
     def raise_exception(_):
