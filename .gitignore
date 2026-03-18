@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.vscode/settings.json
+.env
+.DS_Store
+sandbox.txt
