@@ -12,11 +12,11 @@ if TYPE_CHECKING:
 
 
 class Transaction(db.Model):
-    __tablename__ = 'transaction'
+    __tablename__ = 'Transaction'
     transaction_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String(30), ForeignKey('user.username'), nullable=False)
-    portfolio_id: Mapped[int] = mapped_column(Integer, ForeignKey('portfolio.id'), nullable=False)
-    ticker: Mapped[str] = mapped_column(String(30), ForeignKey('security.ticker'), nullable=False)
+    username: Mapped[str] = mapped_column(String(30), ForeignKey('User.username'), nullable=False)
+    portfolio_id: Mapped[int] = mapped_column(Integer, ForeignKey('Portfolio.id'), nullable=False)
+    ticker: Mapped[str] = mapped_column(String(30), ForeignKey('Security.ticker'), nullable=False)
     transaction_type: Mapped[str] = mapped_column(String(10), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     price: Mapped[float] = mapped_column(Float, nullable=False)

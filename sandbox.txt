@@ -1,0 +1,63 @@
+aws cognito-idp create-user-pool \
+  --pool-name investment-app \
+  --policies 'PasswordPolicy={
+      MinimumLength=8,
+      RequireUppercase=true,
+      RequireLowercase=true,
+      RequireNumbers=true,
+      RequireSymbols=false}' \
+  --auto-verified-attributes email \
+  --schema '[
+    {
+      "Name": "email",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    },
+    {
+      "Name": "given_name",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    },
+    {
+      "Name": "family_name",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    }
+  ]' \
+  --region us-east-2
+  	
+User Pool = us-east-2_cV36VQUgM
+
+aws cognito-idp create-user-pool-client \
+  --user-pool-id us-east-2_cV36VQUgM \
+  --client-name investment-app \
+  --no-generate-secret \
+  --allowed-o-auth-flows code \
+  --allowed-o-auth-scopes openid email profile aws.cognito.signin.user.admin\
+  --allowed-o-auth-flows-user-pool-client \
+  --supported-identity-providers COGNITO \
+  --callback-urls "https://jwt.io" \
+  --logout-urls "https://jwt.io" \
+  --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_REFRESH_TOKEN_AUTH \
+  --region us-east-2
+
+Client ID = 6vb3gct0n3oa8gmnf1k7h07h00
+
+aws cognito-idp create-user-pool-domain \
+  --domain investment-app \
+  --user-pool-id us-east-2_cV36VQUgM \
+  --region us-east-2
+
+https://cognito-idp.us-east-2.amazonaws.com/us-east-2_cV36VQUgM/.well-known/jwks.json
+
+code_verifier: hQJI_yWiv5dp2QDzL4j-2OcEM2E_tGSPF12b_00t_2Y
+code_challenge: 3mrcwuvpL1zY4UgKX4da3RwlJt7mHrTC49_Po5-PWWI
+
+https://investment-app.auth.us-east-2.amazoncognito.com/oauth2/authorize?response_type=code&client_id=6vb3gct0n3oa8gmnf1k7h07h00&redirect_uri=https://jwt.io&scope=openid+email+profile+aws.cognito.signin.user.admin&code_challenge=3mrcwuvpL1zY4UgKX4da3RwlJt7mHrTC49_Po5-PWWI&code_challenge_method=S256
+
+temp auth code be4cfe04-49f5-46f5-9f5b-ba827d9f3dfd
+
+https://investment-app.auth.us-east-2.amazoncognito.com/oauth2/token

@@ -5,19 +5,24 @@ from sqlalchemy.exc import IntegrityError
 from app.db import db
 from app.models.User import User
 
-
 class UnsupportedUserOperationError(Exception):
-    pass
+    def __init__(self, message: str, code: int = 400):
+        super().__init__(message)
+        self.code = code
+class UserOperationError(Exception):
+    def __init__(self, message: str, code: int = 500):
+        super().__init__(message)
+        self.code = code
 
 
 def get_user_by_username(username: str) -> User | None:
     try:
         if not username:
-            raise UnsupportedUserOperationError('Username cannot be empty')
+            raise UnsupportedUserOperationError('Username cannot be empty', 400)
         return db.session.query(User).filter_by(username=username).one_or_none()
     except Exception as e:
         db.session.rollback()
-        raise UnsupportedUserOperationError(f'Failed to retrieve user due to error: {str(e)}')
+        raise UserOperationError(f'Failed to retrieve user due to error: {str(e)}', 500)
 
 
 def get_all_users() -> List[User]:
@@ -26,27 +31,29 @@ def get_all_users() -> List[User]:
         return users
     except Exception as e:
         db.session.rollback()
-        raise UnsupportedUserOperationError(f'Failed to retrieve users due to error: {str(e)}')
+        raise UserOperationError(f'Failed to retrieve users due to error: {str(e)}', 500)
 
 
 def update_user_balance(username: str, new_balance: float):
     try:
         user = db.session.query(User).filter_by(username=username).one_or_none()
         if not user:
-            raise UnsupportedUserOperationError(f'User with username {username} does not exist')
+            raise UnsupportedUserOperationError(f'User with username {username} does not exist', 400)
         user.balance = new_balance
         db.session.flush()
     except Exception as e:
         db.session.rollback()
-        raise UnsupportedUserOperationError(f'Failed to update user balance due to error: {str(e)}')
+        raise UserOperationError(f'Failed to update user balance due to error: {str(e)}', 500)
 
 
-def create_user(username: str, password: str, firstname: str, lastname: str, balance: float):
+def create_user(username: str, firstname: str, lastname: str, balance: float):
     try:
+        existing_user = db.session.query(User).filter_by(username=username).one_or_none()
+        if existing_user:
+            raise UnsupportedUserOperationError(f'User with username {username} already exists', 400)
         db.session.add(
             User(
                 username=username,
-                password=password,
                 firstname=firstname,
                 lastname=lastname,
                 balance=balance,
@@ -55,24 +62,22 @@ def create_user(username: str, password: str, firstname: str, lastname: str, bal
         db.session.flush()
     except Exception as e:
         db.session.rollback()
-        raise UnsupportedUserOperationError(f'Failed to create user due to error: {str(e)}')
+        raise UserOperationError(f'Failed to create user due to error: {str(e)}', 500)
 
 
 def delete_user(username: str):
     if username == 'admin':
-        raise UnsupportedUserOperationError('Cannot delete admin user')
+        raise UnsupportedUserOperationError('Cannot delete admin user', 400)
     if not username:
-        raise UnsupportedUserOperationError('Username cannot be empty')
+        raise UnsupportedUserOperationError('Username cannot be empty', 400)
     try:
         user = db.session.query(User).filter_by(username=username).one_or_none()
         if not user:
-            raise UnsupportedUserOperationError(f'User with username {username} does not exist')
+            raise UnsupportedUserOperationError(f'User with username {username} does not exist', 400)
         db.session.delete(user)
         db.session.flush()
     except IntegrityError:
-        raise UnsupportedUserOperationError(f'Cannot delete user {username} due to existing dependencies')
-    except UnsupportedUserOperationError as e:
-        raise e
+        raise UnsupportedUserOperationError(f'Cannot delete user {username} due to existing dependencies', 400)
     except Exception as e:
         db.session.rollback()
-        raise UnsupportedUserOperationError(f'Failed to delete user due to error: {str(e)}')
+        raise UserOperationError(f'Failed to delete user due to error: {str(e)}', 500)

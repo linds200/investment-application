@@ -6,7 +6,7 @@ from app.service import transaction_service
 @pytest.fixture(autouse=True)
 def setup(db_session):
     # create a test user
-    test_user = User(username='testuser', password='testpass', firstname='Test', lastname='User', balance=1000.00)
+    test_user = User(username='testuser', firstname='Test', lastname='User', balance=1000.00)
     db_session.add(test_user)
     db_session.commit()
     # create a test portfolio
@@ -55,3 +55,27 @@ def test_get_transactions_by_ticker(setup, db_session):
     transactions = transaction_service.get_transactions_by_ticker('AAPL')
     assert len(transactions) == 1
     assert transactions[0].ticker == 'AAPL'
+
+def test_get_transactions_by_user_db_failure(db_session, monkeypatch):
+    def mock_query_failure(_):
+        raise Exception("Database connection error")
+    monkeypatch.setattr(db_session, 'query', mock_query_failure)
+    with pytest.raises(Exception) as e:
+        transaction_service.get_transactions_by_user("testuser")
+    assert "Failed to retrieve transactions due to error: Database connection error" in str(e.value)
+
+def test_get_transactions_by_portfolio_db_failure(db_session, monkeypatch):
+    def mock_query_failure(_):
+        raise Exception("Database connection error")
+    monkeypatch.setattr(db_session, 'query', mock_query_failure)
+    with pytest.raises(Exception) as e:
+        transaction_service.get_transactions_by_portfolio_id(1)
+    assert "Failed to retrieve transactions due to error: Database connection error" in str(e.value)
+    
+def test_get_transactions_by_ticker_db_failure(db_session, monkeypatch):
+    def mock_query_failure(_):
+        raise Exception("Database connection error")
+    monkeypatch.setattr(db_session, 'query', mock_query_failure)
+    with pytest.raises(Exception) as e:
+        transaction_service.get_transactions_by_ticker("AAPL")
+    assert "Failed to retrieve transactions due to error: Database connection error" in str(e.value)

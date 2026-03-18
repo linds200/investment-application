@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class Security(db.Model):
-    __tablename__ = 'security'
+    __tablename__ = 'Security'
     ticker: Mapped[str] = mapped_column(String(10), primary_key=True)
     issuer: Mapped[str] = mapped_column(String(100), nullable=False)
     price: Mapped[float] = mapped_column(Float, nullable=False)

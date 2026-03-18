@@ -9,21 +9,23 @@ from app.db import db
 
 if TYPE_CHECKING:
     # imports that are used only for type checking to avoid circular dependencies
-    from app.models import Investment, Transaction, User
+    from app.models import Investment, Transaction, User, PortfolioSecurity
 
 
 class Portfolio(db.Model):
-    __tablename__ = 'portfolio'
+    __tablename__ = 'Portfolio'
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(30), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
-    owner: Mapped[str] = mapped_column(String(30), ForeignKey('user.username'), nullable=False)
+    owner: Mapped[str] = mapped_column(String(30), ForeignKey('User.username'), nullable=False)
 
     investments: Mapped[List['Investment']] = relationship('Investment', back_populates='portfolio', lazy='selectin')
 
     user: Mapped['User'] = relationship('User', foreign_keys=[owner], back_populates='portfolios', lazy='selectin')
 
     transactions: Mapped[List['Transaction']] = relationship('Transaction', back_populates='portfolio', lazy='selectin')
+    
+    portfolio_securities: Mapped[List['PortfolioSecurity']] = relationship('PortfolioSecurity', back_populates='portfolio', cascade='all, delete-orphan', lazy='selectin')
 
     # this is needed because PyLance cannot infer the constructor signature from SQLAlchemy's Mapped class
     if TYPE_CHECKING:

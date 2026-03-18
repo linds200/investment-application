@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import db
@@ -12,11 +12,11 @@ if TYPE_CHECKING:
 
 
 class Investment(db.Model):
-    __tablename__ = 'investment'
+    __tablename__ = 'Investment'
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    ticker: Mapped[str] = mapped_column(String(10), ForeignKey('security.ticker'))
-    portfolio_id: Mapped[int] = mapped_column(Integer, ForeignKey('portfolio.id'))
+    ticker: Mapped[str] = mapped_column(String(10), ForeignKey('Security.ticker'))
+    portfolio_id: Mapped[int] = mapped_column(Integer, ForeignKey('Portfolio.id'))
 
     security: Mapped['Security'] = relationship(
         'Security', foreign_keys=[ticker], back_populates='investments', lazy='selectin'
