@@ -15,6 +15,24 @@ function formatTransactionDate(value) {
   return new Intl.DateTimeFormat('en-CA').format(date)
 }
 
+function formatTransactionPrice(value) {
+  if (value === null || value === undefined) {
+    return '—'
+  }
+
+  const numericValue = Number(value)
+  if (Number.isNaN(numericValue)) {
+    return '—'
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericValue)
+}
+
 function normalizeTransaction(transaction) {
   return {
     id: transaction.transaction_id ?? transaction.id,
@@ -167,6 +185,7 @@ function TransactionLog({ portfolios }) {
                 <th>Ticker</th>
                 <th>Type</th>
                 <th>Quantity</th>
+                <th>Price</th>
               </tr>
             </thead>
             <tbody>
@@ -181,6 +200,7 @@ function TransactionLog({ portfolios }) {
                     </Badge>
                   </td>
                   <td>{transaction.quantity}</td>
+                  <td>{formatTransactionPrice(transaction.price)}</td>
                 </tr>
               ))}
             </tbody>
