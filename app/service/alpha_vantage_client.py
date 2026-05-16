@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from time import sleep
 
@@ -54,14 +55,17 @@ def get_company_name(ticker: str) -> str | None:
         response = requests.get(url, params=params, timeout=60)
         response.raise_for_status()
         data = response.json()
+        if 'Information' in data or 'Note' in data:
+            message = data.get('Information') or data.get('Note')
+            raise AlphaVantageError(f"Alpha Vantage API response: {message}")
         best_matches = data.get('bestMatches', [])
         if not best_matches:
             raise AlphaVantageError(f"No matches found for ticker '{ticker}' in Alpha Vantage API.")
         
         #find the best match that exactly matches the ticker symbol
         for match in best_matches:
-            if match.get('01. symbol', '').upper() == ticker.upper():
-                company_name = match.get('02. name')
+            if match.get('1. symbol', '').upper() == ticker.upper():
+                company_name = match.get('2. name')
                 current_app.logger.debug(f"Found company name '{company_name}' for ticker '{ticker}'.")
                 cache.set(cache_key, company_name)
                 return company_name
@@ -92,6 +96,9 @@ def get_price_data(ticker: str) -> dict | None:
         response.raise_for_status()
         
         data = response.json()
+        if 'Information' in data or 'Note' in data:
+            message = data.get('Information') or data.get('Note')
+            raise AlphaVantageError(f"Alpha Vantage API response: {message}")
         global_quote = data.get('Global Quote')
         if not global_quote:
             raise AlphaVantageError(f"No price data found for ticker '{ticker}' in Alpha Vantage API.")
@@ -121,7 +128,6 @@ def get_quote(ticker: str) -> SecurityQuote | None:
     company_name = get_company_name(ticker)
     if not company_name:
         return None
-    sleep(1)
     price_data = get_price_data(ticker)
     if not price_data:
         return None
@@ -129,6 +135,6 @@ def get_quote(ticker: str) -> SecurityQuote | None:
     return SecurityQuote(
         ticker=ticker,
         date=price_data.get('date', ''),
-        price=price_data.get('price', ''),
+        price=float(price_data.get('price', 0)),
         issuer=company_name
     )

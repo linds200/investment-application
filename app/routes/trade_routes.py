@@ -18,7 +18,6 @@ class LiquidateInvestmentRequestSchema(BaseModel):
     portfolio_id: int = Field(..., description='ID of the portfolio from which the investment will be liquidated')
     ticker: str = Field(..., max_length=10, description='Stock ticker symbol of the security being sold')
     quantity: int = Field(..., gt=0, description='Number of shares to sell')
-    sale_price: float = Field(..., gt=0, description='Price at which the shares are being sold')
     
     model_config = ConfigDict(extra='forbid')
 
@@ -29,21 +28,15 @@ def _caller_username():
     return g.user["username"] if isinstance(g.user, dict) else g.user
 
 
-def _can_trade(portfolio, portfolio_id: int, username: str) -> bool:
-    owner_username = getattr(portfolio, "owner", None) or getattr(portfolio, "username", None)
-    if username == owner_username:
+def _can_trade(portfolio, username: str) -> bool:
+    if portfolio.owner == username:
         return True
-
-    access = (
+    portfolio_security = (
         db.session.query(PortfolioSecurity)
-        .filter_by(portfolio_id=portfolio_id, username=username)
+        .filter_by(portfolio_id=portfolio.id, username=username)
         .one_or_none()
     )
-    if access is None:
-        return False
-
-    role_value = getattr(access.role, "value", access.role)  # handles enum or str
-    return str(role_value).lower() == "manager"
+    return bool(portfolio_security and str(portfolio_security.role).lower() == 'manager')
 
 
 @trade_bp.route('/buy', methods=['POST'])
@@ -55,7 +48,7 @@ def execute_purchase_order():
         return jsonify(ErrorResponse(error=f'Portfolio with id {req_data.portfolio_id} does not exist', request_id=g.request_id).model_dump()), 404
 
     caller_username = _caller_username()
-    if not _can_trade(portfolio, req_data.portfolio_id, caller_username):
+    if not _can_trade(portfolio, caller_username):
         return jsonify(ErrorResponse(error=f'User {caller_username} does not have permission to trade on portfolio {req_data.portfolio_id}', request_id=g.request_id).model_dump()), 403
 
     trade_service.execute_purchase_order(
@@ -75,14 +68,13 @@ def liquidate_investment():
         return jsonify(ErrorResponse(error=f'Portfolio with id {req_data.portfolio_id} does not exist', request_id=g.request_id).model_dump()), 404
 
     caller_username = _caller_username()
-    if not _can_trade(portfolio, req_data.portfolio_id, caller_username):
+    if not _can_trade(portfolio, caller_username):
         return jsonify(ErrorResponse(error=f'User {caller_username} does not have permission to trade on portfolio {req_data.portfolio_id}', request_id=g.request_id).model_dump()), 403
 
     trade_service.liquidate_investment(
         portfolio_id=req_data.portfolio_id,
         ticker=req_data.ticker,
-        quantity=req_data.quantity,
-        sale_price=req_data.sale_price,
+        quantity=req_data.quantity
     )
     db.session.commit()
     return jsonify({'message': 'Investment liquidated successfully'}), 200

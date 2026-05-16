@@ -62,6 +62,12 @@ def delete_portfolio(portfolio_id: int):
         portfolio = db.session.query(Portfolio).filter_by(id=portfolio_id).one_or_none()
         if not portfolio:
             raise UnsupportedPortfolioOperationError(f'Portfolio with id {portfolio_id} does not exist', 404)
+        if portfolio.investments:
+            raise UnsupportedPortfolioOperationError(
+                f'Cannot delete portfolio with id {portfolio_id}. Please liquidate all holdings before deleting.', 
+                400
+            )
+        
         db.session.delete(portfolio)
         db.session.flush()
     except UnsupportedPortfolioOperationError:

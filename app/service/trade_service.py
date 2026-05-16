@@ -2,6 +2,8 @@ import datetime
 
 from app.db import db
 from app.models import Investment, Portfolio, Security, Transaction
+from app.service import security_service
+from app.service.alpha_vantage_client import AlphaVantageError, get_quote
 
 
 class TradeExecutionException(Exception):
@@ -40,10 +42,21 @@ def execute_purchase_order(portfolio_id: int, ticker: str, quantity: int):
     if not user:
         raise TradeExecutionException(f'User associated with the portfolio ({portfolio_id}) does not exist.', 400)
 
+    try:
+        quote = get_quote(ticker)
+    except AlphaVantageError as e:
+        raise TradeExecutionException(str(e), 503)
+    if quote is None:
+        raise TradeExecutionException(f'Security with ticker {ticker} does not exist.', 404)
+
     security = db.session.query(Security).filter_by(ticker=ticker).one_or_none()
     if not security:
-        raise TradeExecutionException(f'Security with ticker {ticker} does not exist.', 400)
-    total_cost = security.price * quantity
+        security = Security(ticker=ticker, issuer=quote.issuer, price=quote.price)
+        db.session.add(security)
+    else:
+        security.price = quote.price
+
+    total_cost = quote.price * quantity
     if user.balance < total_cost:
         raise InsufficientFundsError('Insufficient funds to complete the purchase.', 400)
     
@@ -61,24 +74,21 @@ def execute_purchase_order(portfolio_id: int, ticker: str, quantity: int):
                 username=user.username,
                 ticker=ticker,
                 quantity=quantity,
-                price=security.price,
+                price=quote.price,
                 transaction_type='BUY',
                 date_time=datetime.datetime.now(),
             )
         )
         db.session.flush()
     except InsufficientFundsError:
-        db.session.rollback()
         raise
     except TradeExecutionException:
-        db.session.rollback()
         raise
     except Exception as e:
-        db.session.rollback()
         raise TradeExecutionException(f'Failed to execute purchase order due to error: {str(e)}', 500)
 
 
-def liquidate_investment(portfolio_id: int, ticker: str, quantity: int, sale_price: float):
+def liquidate_investment(portfolio_id: int, ticker: str, quantity: int):
     """
     Liquidate shares of a security from a portfolio at a given sale price.
 
@@ -106,7 +116,15 @@ def liquidate_investment(portfolio_id: int, ticker: str, quantity: int, sale_pri
             raise TradeExecutionException(
                 f'Cannot liquidate {quantity} shares of {ticker}. Only {investment.quantity} shares available in portfolio', 400
             )
-        total_proceeds = sale_price * quantity
+
+        try:
+            quote = get_quote(ticker)
+        except AlphaVantageError as e:
+            raise TradeExecutionException(str(e), 503)
+        if quote is None:
+            raise TradeExecutionException(f'Security with ticker {ticker} does not exist.', 404)
+
+        total_proceeds = quote.price * quantity
         user.balance += total_proceeds
         investment.quantity -= quantity
         if investment.quantity == 0:
@@ -117,15 +135,13 @@ def liquidate_investment(portfolio_id: int, ticker: str, quantity: int, sale_pri
                 username=user.username,
                 ticker=ticker,
                 quantity=quantity,
-                price=sale_price,
+                price=quote.price,
                 transaction_type='SELL',
                 date_time=datetime.datetime.now(),
             )
         )
         db.session.flush()
     except TradeExecutionException:
-        db.session.rollback()
         raise
     except Exception as e:
-        db.session.rollback()
         raise TradeExecutionException(f'Failed to liquidate investment due to error: {str(e)}', 500) from e

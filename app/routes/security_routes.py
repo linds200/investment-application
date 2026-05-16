@@ -12,6 +12,8 @@ security_bp = Blueprint('security', __name__)
 @requires_auth
 def get_security(ticker):
     ticker_quote = alpha_vantage_client.get_quote(ticker)
+    if ticker_quote is None:
+        return jsonify({'error': f'No data found for ticker {ticker}'}), 404
     return jsonify(ticker_quote.__to_dict__()), 200
 
 

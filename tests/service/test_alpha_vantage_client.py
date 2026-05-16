@@ -10,7 +10,7 @@ def clear_cache():
 
 def test_get_company_name_success(app, mock_alpha_vantage_response, monkeypatch):
     def mock_requests_get(*_, **__):
-        return mock_alpha_vantage_response({'bestMatches': [{'01. symbol': 'MSFT','02. name': 'Microsoft Inc.',}]})
+        return mock_alpha_vantage_response({'bestMatches': [{'1. symbol': 'MSFT','2. name': 'Microsoft Inc.',}]})
     
     monkeypatch.setattr('app.service.alpha_vantage_client.requests.get', mock_requests_get)
     company_name = get_company_name('MSFT')
@@ -38,7 +38,7 @@ def test_get_company_name_no_cache(app, mock_alpha_vantage_response, monkeypatch
     def request_counter(*_, **__):
         nonlocal total_requests
         total_requests += 1
-        return mock_alpha_vantage_response({'bestMatches': [{'01. symbol': 'MSFT','02. name': 'Microsoft Inc.',}]})
+        return mock_alpha_vantage_response({'bestMatches': [{'1. symbol': 'MSFT','2. name': 'Microsoft Inc.',}]})
     
     monkeypatch.setattr('app.service.alpha_vantage_client.requests.get', request_counter)
     

@@ -12,7 +12,7 @@ import app.service.user_service as user_service
 
 class CreatePortfolioRequestSchema(BaseModel):
     name: str = Field(..., max_length=30, description='Portfolio name')
-    description: Optional[str] = Field(None, max_length=500, description='Portfolio description')
+    description: str = Field(..., max_length=500, description='Portfolio description')
     
     model_config = ConfigDict(extra='forbid')
 class PortfolioSecurityRequestSchema(BaseModel):
@@ -27,7 +27,18 @@ portfolio_bp = Blueprint('portfolio', __name__)
 @portfolio_bp.route('/', methods=['GET'])
 @requires_auth
 def get_all_portfolios():
+    caller = g.user['username']
+    current_app.logger.info(f'Received request to get all portfolios by user {caller}')
+    user_portfolios = []
     portfolios = portfolio_service.get_all_portfolios()
+    for portfolio in portfolios:
+        if portfolio.owner == caller:
+            user_portfolios.append(portfolio)
+        else:
+            for role in portfolio.portfolio_securities:
+                if role.username == caller:
+                    user_portfolios.append(portfolio)
+                    break
     return jsonify([portfolio.__to_dict__() for portfolio in portfolios]), 200
 
 
@@ -93,7 +104,7 @@ def delete_portfolio(portfolio_id):
     if portfolio is None:
         return jsonify(ErrorResponse(error=f'Portfolio with id {portfolio_id} does not exist', request_id=g.request_id).model_dump()), 404
     managers = [security.username for security in portfolio.portfolio_securities if security.role == 'manager']
-    if portfolio.owner != caller_username and caller_username not in managers:
+    if portfolio.owner != caller_username:
         return jsonify(ErrorResponse(error=f'User {caller_username} does not have permission to delete portfolio {portfolio_id}', request_id=g.request_id).model_dump()), 403
     portfolio_service.delete_portfolio(portfolio_id)
     db.session.commit()
