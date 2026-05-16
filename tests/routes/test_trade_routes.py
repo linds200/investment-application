@@ -106,13 +106,11 @@ def test_liquidate_investment_request_schema():
         'portfolio_id': 1,
         'ticker': 'AAPL',
         'quantity': 10,
-        'sale_price': 150.0,
     }
     schema = LiquidateInvestmentRequestSchema(**data)
     assert schema.portfolio_id == data['portfolio_id']
     assert schema.ticker == data['ticker']
     assert schema.quantity == data['quantity']
-    assert schema.sale_price == data['sale_price']
 
 
 def test_liquidate_investment_request_schema_invalid():
@@ -120,8 +118,7 @@ def test_liquidate_investment_request_schema_invalid():
         data = {
             'portfolio_id': 1,
             'ticker': 'AAPL',
-            'quantity': 10,
-            'sale_price': -150.0,  # Invalid sale price
+            'quantity': 0,
         }
         LiquidateInvestmentRequestSchema(**data)
 
@@ -132,7 +129,6 @@ def test_liquidate_investment_request_schema_invalid_quantity():
             'portfolio_id': 1,
             'ticker': 'AAPL',
             'quantity': -10,  # Invalid quantity
-            'sale_price': 150.0,
         }
         LiquidateInvestmentRequestSchema(**data)
 
@@ -143,7 +139,6 @@ def test_liquidate_investment_request_schema_extra_field():
             'portfolio_id': 1,
             'ticker': 'AAPL',
             'quantity': 10,
-            'sale_price': 150.0,
             'extra_field': 'This field is not defined in the schema',  # Extra field
         }
         LiquidateInvestmentRequestSchema(**data)
@@ -217,13 +212,12 @@ def test_execute_purchase_order_extra_field(client, setup):
 
 
 def test_liquidate_investment_success(client, setup, monkeypatch):
-    def mock_liquidate_investment(portfolio_id, ticker, quantity, sale_price):
+    def mock_liquidate_investment(portfolio_id, ticker, quantity):
         return {
             "message": "Investment liquidated",
             "portfolio_id": portfolio_id,
             "ticker": ticker,
             "quantity": quantity,
-            "sale_price": sale_price,
         }
 
     monkeypatch.setattr(
@@ -238,7 +232,6 @@ def test_liquidate_investment_success(client, setup, monkeypatch):
             "portfolio_id": setup["portfolio_id"],
             "ticker": "AAPL",
             "quantity": 2,
-            "sale_price": 180.0,
         },
     )
 
@@ -249,10 +242,10 @@ def test_liquidate_investment_missing_field(client, setup):
     response = client.post(
         "/trades/sell",
         headers={"Authorization": "Bearer fake.token.value"},
-        json={"portfolio_id": setup["portfolio_id"], "ticker": "AAPL", "quantity": 1},
+        json={"portfolio_id": setup["portfolio_id"], "ticker": "AAPL"},
     )
     assert response.status_code == 422
-    assert "sale_price" in response.get_json()["error"]
+    assert "quantity" in response.get_json()["error"]
 
 
 def test_liquidate_investment_invalid_quantity(client, setup):
@@ -263,7 +256,6 @@ def test_liquidate_investment_invalid_quantity(client, setup):
             "portfolio_id": setup["portfolio_id"],
             "ticker": "AAPL",
             "quantity": -1,
-            "sale_price": 180.0,
         },
     )
     assert response.status_code == 422
@@ -288,7 +280,6 @@ def test_liquidate_investment_insufficient_quantity(client, setup):
             "portfolio_id": setup["portfolio_id"],
             "ticker": "AAPL",
             "quantity": 1000,   # more than owned
-            "sale_price": 180.0,
         },
     )
     assert response.status_code == 400
@@ -310,7 +301,7 @@ def test_liquidate_investment_no_permission(client, setup, app):
     response = client.post(
         "/trades/sell",
         headers={"Authorization": "Bearer fake.token.value"},
-        json={"portfolio_id": setup["portfolio_id"], "ticker": "AAPL", "quantity": 1, "sale_price": 180.0},
+        json={"portfolio_id": setup["portfolio_id"], "ticker": "AAPL", "quantity": 1},
     )
     assert response.status_code == 403
     assert "does not have permission" in response.get_json()["error"]
@@ -367,7 +358,6 @@ def test_viewer_liquidate_investment_no_permission(client, setup, app, monkeypat
             "portfolio_id": setup["portfolio_id"],
             "ticker": "AAPL",
             "quantity": 1,
-            "sale_price": 180.0,
         },
     )
 
@@ -407,7 +397,7 @@ def test_manager_liquidate_investment(client, setup, app, monkeypatch):
 
     monkeypatch.setattr(
         "app.routes.trade_routes.trade_service.liquidate_investment",
-        lambda portfolio_id, ticker, quantity, sale_price: None,
+        lambda portfolio_id, ticker, quantity: None,
     )
 
     app.config["COGNITO_VALIDATOR"] = FakeValidator("otheruser")
@@ -418,7 +408,6 @@ def test_manager_liquidate_investment(client, setup, app, monkeypatch):
             "portfolio_id": setup["portfolio_id"],
             "ticker": "AAPL",
             "quantity": 1,
-            "sale_price": 180.0,
         },
     )
 

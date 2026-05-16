@@ -1,6 +1,7 @@
 import pytest
 
 from app.models import Investment, Portfolio, Security, User
+from app.service.alpha_vantage_client import SecurityQuote
 from app.service import transaction_service
 from app.service.trade_service import InsufficientFundsError, TradeExecutionException, execute_purchase_order, liquidate_investment
 from app.service.user_service import create_user
@@ -21,6 +22,15 @@ def setup(db_session):
         "portfolio1": portfolio1,
         "portfolio2": portfolio2
     }
+
+
+@pytest.fixture(autouse=True)
+def mock_get_quote(monkeypatch):
+    mock_quotes = {
+        "AAPL": SecurityQuote(ticker="AAPL", date="2024-01-01", price=150.0, issuer="Apple Inc."),
+        "MSFT": SecurityQuote(ticker="MSFT", date="2024-01-01", price=300.0, issuer="Microsoft Corp."),
+    }
+    monkeypatch.setattr("app.service.trade_service.get_quote", lambda ticker: mock_quotes.get(ticker))
 
 def test_execute_purchase_order(setup, db_session):
     portfolio = setup["portfolio1"]
@@ -64,7 +74,7 @@ def test_execute_order_for_nonexistent_security(setup, db_session):
 
 def test_liquidate_investment(setup, db_session):
     portfolio = setup["portfolio1"]
-    liquidate_investment(portfolio.id, "AAPL", 5, 150.0)
+    liquidate_investment(portfolio.id, "AAPL", 5)
     portfolio = db_session.query(Portfolio).filter_by(id=portfolio.id).one()
     updated_investment = next((inv for inv in portfolio.investments if inv.ticker == "AAPL"), None)
     assert updated_investment is not None
@@ -77,7 +87,7 @@ def test_liquidate_investment(setup, db_session):
 
 def test_liquidate_entire_investment(setup, db_session):
     portfolio = setup["portfolio1"]
-    liquidate_investment(portfolio.id, "AAPL", 10, 150.0)
+    liquidate_investment(portfolio.id, "AAPL", 10)
     portfolio = db_session.query(Portfolio).filter_by(id=portfolio.id).one()
     updated_investment = db_session.query(Investment).filter_by(portfolio_id=portfolio.id, ticker="AAPL").one_or_none()
     assert updated_investment is None
@@ -86,16 +96,16 @@ def test_liquidate_entire_investment(setup, db_session):
 
 def test_liquidate_investment_invalid_portfolio(db_session):
     with pytest.raises(TradeExecutionException):
-        liquidate_investment(9999, "AAPL", 5, 150.0)
+        liquidate_investment(9999, "AAPL", 5)
 
 def test_liquidate_non_existing_investment(setup, db_session):
     portfolio = setup["portfolio1"]
     with pytest.raises(TradeExecutionException):
-        liquidate_investment(portfolio.id, "MSFT", 5, 150.0)
+        liquidate_investment(portfolio.id, "MSFT", 5)
 
 def test_liquidate_investment_insufficient_quantity(setup, db_session):
     portfolio = setup["portfolio1"]
     with pytest.raises(TradeExecutionException) as e:
-        liquidate_investment(portfolio.id, "AAPL", 1000, 150.0)
+        liquidate_investment(portfolio.id, "AAPL", 1000)
     assert "Cannot liquidate 1000 shares of AAPL. Only 10 shares available in portfolio" in str(e.value)
     
