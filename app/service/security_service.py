@@ -1,0 +1,28 @@
+from typing import List
+
+from app.db import db
+from app.models import Security
+
+
+class SecurityOperationError(Exception):
+    def __init__(self, message: str, code: int = 500):
+        super().__init__(message)
+        self.code = code
+
+
+def get_all_securities() -> List[Security]:
+    try:
+        securities = db.session.query(Security).all()
+        return securities
+    except Exception as e:
+        db.session.rollback()
+        raise SecurityOperationError(f'Failed to retrieve securities due to error: {str(e)}', 500)
+
+
+def get_security_by_ticker(ticker: str) -> Security | None:
+    try:
+        security = db.session.query(Security).filter_by(ticker=ticker).one_or_none()
+        return security
+    except Exception as e:
+        db.session.rollback()
+        raise SecurityOperationError(f'Failed to retrieve security due to error: {str(e)}', 500)
